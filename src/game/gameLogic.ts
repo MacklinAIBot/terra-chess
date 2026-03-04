@@ -10,13 +10,22 @@ import type {
   Cell,
 } from './types';
 
-const BOARD_SIZE = 32;
+// Config by player count
+const GAME_CONFIG: Record<number, { boardSize: number; piecesPerPlayer: number; maxMovement: number }> = {
+  2: { boardSize: 32, piecesPerPlayer: 32, maxMovement: 8 },
+  4: { boardSize: 32, piecesPerPlayer: 32, maxMovement: 8 },
+};
 
-export function createInitialBoard(): Cell[][] {
+export function getConfig(numPlayers: number) {
+  return GAME_CONFIG[numPlayers] || GAME_CONFIG[2];
+}
+
+export function createInitialBoard(numPlayers: number): Cell[][] {
+  const { boardSize } = getConfig(numPlayers);
   const board: Cell[][] = [];
-  for (let row = 0; row < BOARD_SIZE; row++) {
+  for (let row = 0; row < boardSize; row++) {
     board[row] = [];
-    for (let col = 0; col < BOARD_SIZE; col++) {
+    for (let col = 0; col < boardSize; col++) {
       board[row][col] = {
         position: { row, col },
         piece: null,
@@ -27,7 +36,10 @@ export function createInitialBoard(): Cell[][] {
 }
 
 export function createPlayers(numPlayers: number): Player[] {
-  const colors: PlayerColor[] = ['red', 'blue', 'green', 'yellow'];
+  // Order for turn-taking: Blue → Red (2p), Blue → Red → Green → Yellow (4p)
+  const colors: PlayerColor[] = numPlayers === 2 
+    ? ['blue', 'red'] 
+    : ['blue', 'red', 'green', 'yellow'];
   return colors.slice(0, numPlayers).map((color) => ({
     color,
     alive: true,
@@ -37,81 +49,108 @@ export function createPlayers(numPlayers: number): Player[] {
 }
 
 function getStartingPositions(player: PlayerColor, numPlayers: number): Position[] {
+  const { boardSize } = getConfig(numPlayers);
   const positions: Position[] = [];
   
+  // Positions: Blue=top, Red=bottom, Yellow=left, Green=right
+  const startCol = 13; // N (columns N-U = indices 13-20)
+  const numCols = 8; // 8 pieces per row
+  
   if (numPlayers === 2) {
-    // 2 players: red on top (rows 0-3), blue on bottom (rows 28-31)
-    if (player === 'red') {
-      // Pawns on row 3
-      for (let col = 0; col < BOARD_SIZE; col++) {
-        positions.push({ row: 3, col });
+    if (player === 'blue') {
+      // Blue at TOP (row 0)
+      // Row 1: R, N, B, Q, K, B, N, R
+      const row1Pieces = ['rook', 'knight', 'bishop', 'queen', 'king', 'bishop', 'knight', 'rook'];
+      row1Pieces.forEach((_, idx) => {
+        positions.push({ row: 0, col: startCol + idx });
+      });
+      // Row 2: R, N, B, N, N, B, N, R
+      const row2Pieces = ['rook', 'knight', 'bishop', 'knight', 'knight', 'bishop', 'knight', 'rook'];
+      row2Pieces.forEach((_, idx) => {
+        positions.push({ row: 1, col: startCol + idx });
+      });
+      // Rows 3-4: Pawns
+      for (let col = 0; col < numCols; col++) {
+        positions.push({ row: 2, col: startCol + col });
+        positions.push({ row: 3, col: startCol + col });
       }
-      // Back row on row 0
-      positions.push({ row: 0, col: 0 }); // rook
-      positions.push({ row: 0, col: 1 }); // knight
-      positions.push({ row: 0, col: 2 }); // bishop
-      positions.push({ row: 0, col: 3 }); // bishop
-      positions.push({ row: 0, col: 4 }); // queen
-      positions.push({ row: 0, col: 5 }); // king
-      positions.push({ row: 0, col: 6 }); // bishop
-      positions.push({ row: 0, col: 7 }); // bishop
-      positions.push({ row: 0, col: 8 }); // knight
-      positions.push({ row: 0, col: 9 }); // rook
-      // Scale pieces - add more
-      positions.push({ row: 0, col: 10 }); // rook
-      positions.push({ row: 0, col: 11 }); // knight
-      positions.push({ row: 0, col: 12 }); // bishop
-      positions.push({ row: 0, col: 13 }); // queen
-      positions.push({ row: 0, col: 14 }); // king
-      positions.push({ row: 0, col: 15 }); // bishop
-      positions.push({ row: 0, col: 16 }); // knight
-      positions.push({ row: 0, col: 17 }); // rook
-      positions.push({ row: 0, col: 18 }); // rook
-      positions.push({ row: 0, col: 19 }); // knight
-      positions.push({ row: 0, col: 20 }); // bishop
-      positions.push({ row: 0, col: 21 }); // queen
-      positions.push({ row: 0, col: 22 }); // king
-      positions.push({ row: 0, col: 23 }); // bishop
-      positions.push({ row: 0, col: 24 }); // knight
-      positions.push({ row: 0, col: 25 }); // rook
-      positions.push({ row: 0, col: 26 }); // rook
-      positions.push({ row: 0, col: 27 }); // knight
-      positions.push({ row: 0, col: 28 }); // bishop
-      positions.push({ row: 0, col: 29 }); // queen
-      positions.push({ row: 0, col: 30 }); // king
-      positions.push({ row: 0, col: 31 }); // bishop
-    } else if (player === 'blue') {
-      // Pawns on row 28
-      for (let col = 0; col < BOARD_SIZE; col++) {
-        positions.push({ row: 28, col });
-      }
-      // Back row on row 31
-      for (let col = 0; col < BOARD_SIZE; col++) {
-        positions.push({ row: 31, col });
+    } else if (player === 'red') {
+      // Red at BOTTOM (row 31)
+      // Row 1 (from bottom): R, N, B, Q, K, B, N, R
+      const row1Pieces = ['rook', 'knight', 'bishop', 'queen', 'king', 'bishop', 'knight', 'rook'];
+      row1Pieces.forEach((_, idx) => {
+        positions.push({ row: boardSize - 1, col: startCol + idx });
+      });
+      // Row 2: R, N, B, N, N, B, N, R
+      const row2Pieces = ['rook', 'knight', 'bishop', 'knight', 'knight', 'bishop', 'knight', 'rook'];
+      row2Pieces.forEach((_, idx) => {
+        positions.push({ row: boardSize - 2, col: startCol + idx });
+      });
+      // Rows 3-4: Pawns
+      for (let col = 0; col < numCols; col++) {
+        positions.push({ row: boardSize - 3, col: startCol + col });
+        positions.push({ row: boardSize - 4, col: startCol + col });
       }
     }
   } else if (numPlayers === 4) {
-    // 4 players: red (top), blue (right), green (bottom), yellow (left)
-    const half = BOARD_SIZE / 2;
-    if (player === 'red') {
-      for (let col = 0; col < half; col++) {
-        positions.push({ row: 3, col });
-        positions.push({ row: 0, col });
+    // 4 players: Blue=top, Red=bottom, Yellow=left, Green=right
+    if (player === 'blue') {
+      // Blue at TOP (row 0)
+      const row1Pieces = ['rook', 'knight', 'bishop', 'queen', 'king', 'bishop', 'knight', 'rook'];
+      row1Pieces.forEach((_, idx) => {
+        positions.push({ row: 0, col: startCol + idx });
+      });
+      const row2Pieces = ['rook', 'knight', 'bishop', 'knight', 'knight', 'bishop', 'knight', 'rook'];
+      row2Pieces.forEach((_, idx) => {
+        positions.push({ row: 1, col: startCol + idx });
+      });
+      for (let col = 0; col < numCols; col++) {
+        positions.push({ row: 2, col: startCol + col });
+        positions.push({ row: 3, col: startCol + col });
       }
-    } else if (player === 'blue') {
-      for (let row = 0; row < half; row++) {
-        positions.push({ row, col: 28 });
-        positions.push({ row, col: 31 });
+    } else if (player === 'red') {
+      // Red at BOTTOM (row 31)
+      const row1Pieces = ['rook', 'knight', 'bishop', 'queen', 'king', 'bishop', 'knight', 'rook'];
+      row1Pieces.forEach((_, idx) => {
+        positions.push({ row: boardSize - 1, col: startCol + idx });
+      });
+      const row2Pieces = ['rook', 'knight', 'bishop', 'knight', 'knight', 'bishop', 'knight', 'rook'];
+      row2Pieces.forEach((_, idx) => {
+        positions.push({ row: boardSize - 2, col: startCol + idx });
+      });
+      for (let col = 0; col < numCols; col++) {
+        positions.push({ row: boardSize - 3, col: startCol + col });
+        positions.push({ row: boardSize - 4, col: startCol + col });
       }
     } else if (player === 'green') {
-      for (let col = half; col < BOARD_SIZE; col++) {
-        positions.push({ row: 28, col });
-        positions.push({ row: 31, col });
+      // Green at RIGHT (col 31)
+      const rightStartRow = startCol;
+      const row1Pieces = ['rook', 'knight', 'bishop', 'queen', 'king', 'bishop', 'knight', 'rook'];
+      row1Pieces.forEach((_, idx) => {
+        positions.push({ row: rightStartRow + idx, col: boardSize - 1 });
+      });
+      const row2Pieces = ['rook', 'knight', 'bishop', 'knight', 'knight', 'bishop', 'knight', 'rook'];
+      row2Pieces.forEach((_, idx) => {
+        positions.push({ row: rightStartRow + idx, col: boardSize - 2 });
+      });
+      for (let row = 0; row < numCols; row++) {
+        positions.push({ row: rightStartRow + row, col: boardSize - 3 });
+        positions.push({ row: rightStartRow + row, col: boardSize - 4 });
       }
     } else if (player === 'yellow') {
-      for (let row = half; row < BOARD_SIZE; row++) {
-        positions.push({ row, col: 3 });
-        positions.push({ row, col: 0 });
+      // Yellow at LEFT (col 0)
+      const leftStartRow = startCol;
+      const row1Pieces = ['rook', 'knight', 'bishop', 'queen', 'king', 'bishop', 'knight', 'rook'];
+      row1Pieces.forEach((_, idx) => {
+        positions.push({ row: leftStartRow + idx, col: 0 });
+      });
+      const row2Pieces = ['rook', 'knight', 'bishop', 'knight', 'knight', 'bishop', 'knight', 'rook'];
+      row2Pieces.forEach((_, idx) => {
+        positions.push({ row: leftStartRow + idx, col: 1 });
+      });
+      for (let row = 0; row < numCols; row++) {
+        positions.push({ row: leftStartRow + row, col: 2 });
+        positions.push({ row: leftStartRow + row, col: 3 });
       }
     }
   }
@@ -119,30 +158,32 @@ function getStartingPositions(player: PlayerColor, numPlayers: number): Position
   return positions;
 }
 
-function createPiecesForPlayer(color: PlayerColor, numPlayers: number): Piece[] {
+function createPiecesForPlayer(color: PlayerColor, _numPlayers: number): Piece[] {
   const pieces: Piece[] = [];
-  const positions = getStartingPositions(color, numPlayers);
-  let pieceIndex = 0;
   
-  // Piece order for 4x scale (simplified)
+  // Specific piece order matching positions from getStartingPositions:
+  // Row 1: R, N, B, Q, K, B, N, R
+  // Row 2: R, N, B, N, N, B, N, R  
+  // Row 3: P (8 pawns)
+  // Row 4: P (8 pawns)
   const pieceTypes: PieceType[] = [
+    // Row 1 (8 pieces)
     'rook', 'knight', 'bishop', 'queen', 'king', 'bishop', 'knight', 'rook',
+    // Row 2 (8 pieces)
+    'rook', 'knight', 'bishop', 'knight', 'knight', 'bishop', 'knight', 'rook',
+    // Row 3 (8 pawns)
+    'pawn', 'pawn', 'pawn', 'pawn', 'pawn', 'pawn', 'pawn', 'pawn',
+    // Row 4 (8 pawns)
     'pawn', 'pawn', 'pawn', 'pawn', 'pawn', 'pawn', 'pawn', 'pawn',
   ];
   
-  // Repeat for 4x scale
-  for (let i = 0; i < 4; i++) {
-    pieceTypes.forEach((type) => {
-      if (pieceIndex < positions.length) {
-        pieces.push({
-          id: `${color}-${type}-${i}`,
-          type,
-          player: color,
-        });
-        pieceIndex++;
-      }
+  pieceTypes.forEach((type, index) => {
+    pieces.push({
+      id: `${color}-${type}-${index}`,
+      type,
+      player: color,
     });
-  }
+  });
   
   return pieces;
 }
@@ -151,11 +192,12 @@ export function setupBoard(
   _board: Cell[][],
   players: Player[]
 ): Cell[][] {
-  const newBoard = createInitialBoard();
+  const numPlayers = players.length;
+  const newBoard = createInitialBoard(numPlayers);
   
   players.forEach((player) => {
-    const pieces = createPiecesForPlayer(player.color, players.length);
-    const positions = getStartingPositions(player.color, players.length);
+    const pieces = createPiecesForPlayer(player.color, numPlayers);
+    const positions = getStartingPositions(player.color, numPlayers);
     
     pieces.forEach((piece, index) => {
       if (index < positions.length) {
@@ -168,12 +210,12 @@ export function setupBoard(
   return newBoard;
 }
 
-function isWithinBounds(pos: Position): boolean {
-  return pos.row >= 0 && pos.row < BOARD_SIZE && pos.col >= 0 && pos.col < BOARD_SIZE;
+function isWithinBounds(pos: Position, boardSize: number): boolean {
+  return pos.row >= 0 && pos.row < boardSize && pos.col >= 0 && pos.col < boardSize;
 }
 
 function getPieceAt(board: Cell[][], pos: Position): Piece | null {
-  if (!isWithinBounds(pos)) return null;
+  if (!isWithinBounds(pos, board.length)) return null;
   return board[pos.row][pos.col].piece;
 }
 
@@ -181,7 +223,7 @@ function getPlayerDirection(playerColor: PlayerColor, numPlayers: number): numbe
   if (numPlayers === 2) {
     return playerColor === 'red' ? 1 : -1;
   }
-  return 1; // Default for other configs
+  return 1;
 }
 
 export function getValidMoves(
@@ -191,15 +233,17 @@ export function getValidMoves(
   players: Player[],
   currentPlayer: Player
 ): Position[] {
+  const { maxMovement } = getConfig(players.length);
+  const boardSize = board.length;
   const moves: Position[] = [];
   const numPlayers = players.length;
   const inCheck = currentPlayer.inCheck;
   
   // If king is in check, can only move 1 square
-  const maxDistance = (piece.type === 'king' && inCheck) ? 1 : 4;
+  const maxDistance = (piece.type === 'king' && inCheck) ? 1 : maxMovement;
   
   const addMove = (row: number, col: number) => {
-    if (!isWithinBounds({ row, col })) return;
+    if (!isWithinBounds({ row, col }, boardSize)) return;
     const targetPiece = getPieceAt(board, { row, col });
     
     // Can't capture own piece
@@ -223,7 +267,7 @@ export function getValidMoves(
           if (targetPiece.player !== piece.player) {
             addMove(newRow, newCol);
           }
-          break; // Blocked by any piece
+          break;
         }
         addMove(newRow, newCol);
       }
@@ -250,56 +294,120 @@ export function getValidMoves(
     });
   }
   
-  // Knight moves
+  // Knight moves (specific L-shapes: 1x2, 2x1, 2x4, 4x2)
   if (piece.type === 'knight') {
-    const knightMoves = [
+    const knightMoves: [number, number][] = [
+      [1, 2], [1, -2], [-1, 2], [-1, -2],
       [2, 1], [2, -1], [-2, 1], [-2, -1],
-      [1, 2], [1, -2], [-1, 2], [-1, -2]
+      [2, 4], [2, -4], [-2, 4], [-2, -4],
+      [4, 2], [4, -2], [-4, 2], [-4, -2],
     ];
     knightMoves.forEach(([dr, dc]) => {
       addMove(pos.row + dr, pos.col + dc);
     });
   }
   
-  // King moves
+  // King moves: 2 spaces unless in check, attacking, or moving into check
   if (piece.type === 'king') {
-    const kingMoves = [
+    // Helper: check if a position is under attack by any enemy
+    const isUnderAttack = (targetRow: number, targetCol: number): boolean => {
+      for (let r = 0; r < boardSize; r++) {
+        for (let c = 0; c < boardSize; c++) {
+          const enemyPiece = board[r][c].piece;
+          if (enemyPiece && enemyPiece.player !== piece.player) {
+            const dr = targetRow - r;
+            const dc = targetCol - c;
+            const absDr = Math.abs(dr);
+            const absDc = Math.abs(dc);
+            
+            if (enemyPiece.type === 'pawn') {
+              const enemyDir = getPlayerDirection(enemyPiece.player, numPlayers);
+              if (absDr === 1 && absDc === 1 && dr === enemyDir) return true;
+            } else if (enemyPiece.type === 'knight') {
+              const knightPatterns = [[1,2],[2,1],[2,-1],[1,-2],[-1,2],[-2,1],[-2,-1],[-1,-2]];
+              if (knightPatterns.some(([kd, kc]) => kd === absDr && kc === absDc)) return true;
+            } else if (enemyPiece.type === 'king') {
+              if (absDr <= 1 && absDc <= 1) return true;
+            } else if (enemyPiece.type === 'bishop' || enemyPiece.type === 'queen') {
+              if (absDr === absDc && absDr > 0 && absDr <= maxMovement) {
+                const stepR = dr / absDr;
+                const stepC = dc / absDc;
+                let clear = true;
+                for (let i = 1; i < absDr; i++) {
+                  if (board[r + stepR * i][c + stepC * i].piece) { clear = false; break; }
+                }
+                if (clear) return true;
+              }
+            }
+            if (enemyPiece.type === 'rook' || enemyPiece.type === 'queen') {
+              if ((absDr === 0 || absDc === 0) && absDr + absDc > 0 && Math.max(absDr, absDc) <= maxMovement) {
+                const stepR = absDr === 0 ? 0 : dr / absDr;
+                const stepC = absDc === 0 ? 0 : dc / absDc;
+                let clear = true;
+                for (let i = 1; i < Math.max(absDr, absDc); i++) {
+                  if (board[r + stepR * i][c + stepC * i].piece) { clear = false; break; }
+                }
+                if (clear) return true;
+              }
+            }
+          }
+        }
+      }
+      return false;
+    };
+    
+    const isAttacking = (row: number, col: number): boolean => {
+      const targetPiece = getPieceAt(board, { row, col });
+      return targetPiece !== null && targetPiece.player !== piece.player;
+    };
+    
+    const maxDist = inCheck ? 1 : 2;
+    
+    const directions = [
       [1, 0], [-1, 0], [0, 1], [0, -1],
       [1, 1], [1, -1], [-1, 1], [-1, -1]
     ];
-    kingMoves.forEach(([dr, dc]) => {
-      addMove(pos.row + dr, pos.col + dc);
+    
+    directions.forEach(([dr, dc]) => {
+      for (let i = 1; i <= maxDist; i++) {
+        const newRow = pos.row + dr * i;
+        const newCol = pos.col + dc * i;
+        
+        // Can't move through or into attacked squares - each step must be safe
+        if (isUnderAttack(newRow, newCol)) {
+          break; // Can't step on or pass through attacked squares
+        }
+        
+        // If attacking (trying to capture), limit to 1 space
+        if (i > 1 && isAttacking(newRow, newCol)) break;
+        
+        addMove(newRow, newCol);
+      }
     });
   }
   
-  // Pawn moves (forward + sideways for Empire Chess)
+  // Pawn moves (Empire Chess: 2 spaces any direction, 4 on first move, capture diagonally 1)
   if (piece.type === 'pawn') {
     const direction = getPlayerDirection(piece.player, numPlayers);
+    const firstMove = !piece.hasMoved;
+    const moveDistance = firstMove ? 4 : 2;
+    const effectiveDistance = inCheck ? 1 : moveDistance;
     
-    // Forward moves
-    for (let i = 1; i <= (inCheck ? 1 : 4); i++) {
-      const newRow = pos.row + direction * i;
-      if (!isWithinBounds({ row: newRow, col: pos.col })) break;
-      const targetPiece = getPieceAt(board, { row: newRow, col: pos.col });
-      if (targetPiece) break;
-      addMove(newRow, pos.col);
+    // Forward/backward moves
+    for (let i = 1; i <= effectiveDistance; i++) {
+      // Forward
+      addMove(pos.row + direction * i, pos.col);
+      // Backward
+      if (i <= 2) addMove(pos.row - direction * i, pos.col);
     }
     
-    // Sideways moves (Empire Chess special rule)
-    if (!inCheck || 1 <= maxDistance) {
-      // Left
-      addMove(pos.row, pos.col - 1);
-      // Right  
-      addMove(pos.row, pos.col + 1);
-      
-      // Also allow 2-4 squares sideways
-      for (let i = 2; i <= maxDistance; i++) {
-        addMove(pos.row, pos.col - i);
-        addMove(pos.row, pos.col + i);
-      }
+    // Sideways moves (left/right)
+    for (let i = 1; i <= effectiveDistance; i++) {
+      addMove(pos.row, pos.col - i);
+      addMove(pos.row, pos.col + i);
     }
     
-    // Diagonal captures
+    // Diagonal captures (only 1 space, normal chess)
     const captureOffsets = [[direction, 1], [direction, -1]];
     captureOffsets.forEach(([dr, dc]) => {
       const targetPiece = getPieceAt(board, { row: pos.row + dr, col: pos.col + dc });
@@ -317,11 +425,11 @@ export function checkForCheck(
   playerColor: PlayerColor,
   players: Player[]
 ): boolean {
-  // Find the king's position
+  const boardSize = board.length;
   let kingPos: Position | null = null;
   
-  for (let row = 0; row < BOARD_SIZE; row++) {
-    for (let col = 0; col < BOARD_SIZE; col++) {
+  for (let row = 0; row < boardSize; row++) {
+    for (let col = 0; col < boardSize; col++) {
       const piece = board[row][col].piece;
       if (piece && piece.player === playerColor && piece.type === 'king') {
         kingPos = { row, col };
@@ -331,11 +439,10 @@ export function checkForCheck(
     if (kingPos) break;
   }
   
-  if (!kingPos) return false; // King captured
+  if (!kingPos) return false;
   
-  // Check if any enemy piece can attack the king
-  for (let row = 0; row < BOARD_SIZE; row++) {
-    for (let col = 0; col < BOARD_SIZE; col++) {
+  for (let row = 0; row < boardSize; row++) {
+    for (let col = 0; col < boardSize; col++) {
       const piece = board[row][col].piece;
       if (piece && piece.player !== playerColor) {
         const enemyPlayer = players.find(p => p.color === piece.player)!;
@@ -362,7 +469,6 @@ export function checkWinCondition(players: Player[]): PlayerColor | null {
 
 export function nextTurn(players: Player[], currentIndex: number): number {
   const nextIndex = (currentIndex + 1) % players.length;
-  // Skip dead players
   if (!players[nextIndex].alive) {
     return nextTurn(players, nextIndex);
   }
@@ -371,7 +477,7 @@ export function nextTurn(players: Player[], currentIndex: number): number {
 
 export function initializeGame(numPlayers: number): GameState {
   const players = createPlayers(numPlayers);
-  const board = createInitialBoard();
+  const board = createInitialBoard(numPlayers);
   const setupBoardResult = setupBoard(board, players);
   
   return {

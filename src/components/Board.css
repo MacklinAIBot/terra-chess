@@ -7,16 +7,77 @@
   justify-content: center;
 }
 
+.board-container-outer {
+  position: relative;
+}
+
+.attack-range-box {
+  border: 3px solid rgba(255, 165, 0, 0.8);
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 10;
+}
+
 .board-scroll {
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
+.board-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.board-middle {
+  display: flex;
+  align-items: center;
+}
+
 .board {
   display: grid;
-  grid-template-columns: repeat(32, 1fr);
-  grid-template-rows: repeat(32, 1fr);
   border: 4px solid #333;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.col-labels {
+  display: flex;
+  justify-content: space-around;
+  font-size: 10px;
+  color: #666;
+  font-weight: bold;
+  user-select: none;
+}
+
+.col-labels.top {
+  margin-bottom: 4px;
+}
+
+.col-labels.bottom {
+  margin-top: 4px;
+}
+
+.col-labels span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.row-labels {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  font-size: 10px;
+  color: #666;
+  font-weight: bold;
+  user-select: none;
+}
+
+.row-labels span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
