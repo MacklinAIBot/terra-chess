@@ -12,7 +12,7 @@ import {
   nextTurn,
   getConfig,
 } from './game/gameLogic';
-import { getAIMove } from './game/ai';
+import { getAIMove, type AIMove } from './game/ai';
 import './App.css';
 
 interface BoundingBox {
@@ -58,7 +58,7 @@ function calculateAttackRange(piece: { type: PieceType; player: string }, positi
       minCol = Math.max(0, col - 2);
       maxCol = Math.min(boardSize - 1, col + 2);
       break;
-    case 'pawn':
+    case 'pawn': {
       const direction = piece.player === 'blue' ? 1 : -1;
       minRow = Math.max(0, row - 2 * Math.abs(direction));
       maxRow = Math.min(boardSize - 1, row + 4 * direction);
@@ -66,6 +66,7 @@ function calculateAttackRange(piece: { type: PieceType; player: string }, positi
       minCol = Math.max(0, col - 2);
       maxCol = Math.min(boardSize - 1, col + 2);
       break;
+    }
     default:
       return null;
   }
@@ -79,7 +80,8 @@ function App() {
     { color: 'blue', isAI: false },
     { color: 'red', isAI: true },
   ]);
-  const [isAITurn, setIsAITurn] = useState(false);
+  const aiInProgressRef = useRef(false);
+  const [debugMsg, setDebugMsg] = useState<string>('');
   const gameStateRef = useRef(gameState);
   gameStateRef.current = gameState;
   
@@ -100,28 +102,47 @@ function App() {
   
   // Trigger AI move
   useEffect(() => {
-    if (currentPlayerIsAI && gameState.phase === 'playing' && !isAITurn) {
-      setIsAITurn(true);
-      
-      const timer = setTimeout(() => {
-        const aiMove = getAIMove(gameStateRef.current);
-        if (aiMove) {
-          handleCellClick(aiMove);
-        }
-        setIsAITurn(false);
-      }, 800);
-      
-      return () => clearTimeout(timer);
+    // Skip if already processing AI move or not AI's turn
+    if (aiInProgressRef.current || !currentPlayerIsAI || gameState.phase !== 'playing') {
+      return;
     }
-  }, [currentPlayerIsAI, gameState.phase, gameState.currentPlayerIndex, isAITurn]);
+    
+    aiInProgressRef.current = true;
+    setDebugMsg('🤖 AI thinking...');
+    
+    const timer = setTimeout(() => {
+      try {
+        const aiMove: AIMove | null = getAIMove(gameStateRef.current);
+        if (aiMove) {
+          setDebugMsg(`🤖 AI moving from (${aiMove.from.row},${aiMove.from.col}) to (${aiMove.to.row},${aiMove.to.col})`);
+          handleCellClick(aiMove.from, true);
+          setTimeout(() => {
+            handleCellClick(aiMove.to, true);
+            setDebugMsg('');
+            aiInProgressRef.current = false;
+          }, 100);
+        } else {
+          setDebugMsg('🤖 AI: No move available!');
+          aiInProgressRef.current = false;
+        }
+      } catch (err) {
+        console.error('AI Error:', err);
+        setDebugMsg(`🤖 AI Error: ${err}`);
+        aiInProgressRef.current = false;
+      }
+    }, 800);
+    
+    return () => clearTimeout(timer);
+  }, [currentPlayerIsAI, gameState.phase, gameState.currentPlayerIndex]);
   
-  const handleCellClick = useCallback((position: Position) => {
+  const handleCellClick = useCallback((position: Position, allowAI: boolean = false) => {
     setGameState((prev) => {
       if (prev.phase === 'finished') return prev;
       
       const currentPlayer = prev.players[prev.currentPlayerIndex];
       const playerType = playerTypes.find(p => p.color === currentPlayer?.color);
-      if (playerType?.isAI && prev.phase === 'playing') return prev;
+      // Block human clicks during AI turn, unless explicitly allowed (for AI moves)
+      if (!allowAI && playerType?.isAI && prev.phase === 'playing') return prev;
       
       const clickedCell = prev.board[position.row][position.col];
       
@@ -198,11 +219,12 @@ function App() {
         { color: 'red', isAI: true },
       ]);
     } else {
+      // 4-player mode: Blue human, rest AI
       setPlayerTypes([
         { color: 'blue', isAI: false },
         { color: 'red', isAI: true },
-        { color: 'green', isAI: false },
-        { color: 'yellow', isAI: false },
+        { color: 'green', isAI: true },
+        { color: 'yellow', isAI: true },
       ]);
     }
   }, []);
@@ -215,6 +237,9 @@ function App() {
   
   return (
     <div className="app">
+      <div className="debug-msg" style={{ padding: '10px', background: '#333', color: '#fff', textAlign: 'center', minHeight: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20%', minWidth: '200px', boxSizing: 'border-box' }}>
+          {debugMsg || '🤖 AI ready'}
+        </div>
       <div className="game-area">
         <Board gameState={gameState} onCellClick={handleCellClick} boundingBox={boundingBox} />
       </div>
@@ -226,7 +251,6 @@ function App() {
           selectedPosition={gameState.selectedCell}
           playerTypes={playerTypes}
           onToggleAI={toggleAI}
-          isAITurn={isAITurn}
         />
       </div>
     </div>

@@ -51,33 +51,39 @@ export function GameInfo({ gameState, onNewGame, selectedPiece, selectedPosition
     <div className="game-info">
       <h1 className="game-title">Empire Chess</h1>
       
-      {selectedPiece && (
-        <div className="selection-card">
-          <div className="selection-header">
-            <span 
-              className="selection-piece"
-              style={{ color: PLAYER_COLOR_HEX[selectedPiece.player] }}
-            >
-              {PIECE_SYMBOLS[selectedPiece.type]}
-            </span>
-            <span className="selection-name">
-              {selectedPiece.type.charAt(0).toUpperCase() + selectedPiece.type.slice(1)}
-            </span>
-            <span 
-              className="selection-player"
-              style={{ color: PLAYER_COLOR_HEX[selectedPiece.player] }}
-            >
-              ({selectedPiece.player})
-            </span>
+      <div className="selection-card">
+        {selectedPiece ? (
+          <>
+            <div className="selection-header">
+              <span 
+                className="selection-piece"
+                style={{ color: PLAYER_COLOR_HEX[selectedPiece.player] }}
+              >
+                {PIECE_SYMBOLS[selectedPiece.type]}
+              </span>
+              <span className="selection-name">
+                {selectedPiece.type.charAt(0).toUpperCase() + selectedPiece.type.slice(1)}
+              </span>
+              <span 
+                className="selection-player"
+                style={{ color: PLAYER_COLOR_HEX[selectedPiece.player] }}
+              >
+                ({selectedPiece.player})
+              </span>
+            </div>
+            <div className="selection-position">
+              Position: {positionNotation}
+            </div>
+            <div className="selection-description">
+              {PIECE_DESCRIPTIONS[selectedPiece.type]}
+            </div>
+          </>
+        ) : (
+          <div className="selection-placeholder">
+            Select a piece to see details
           </div>
-          <div className="selection-position">
-            Position: {positionNotation}
-          </div>
-          <div className="selection-description">
-            {PIECE_DESCRIPTIONS[selectedPiece.type]}
-          </div>
-        </div>
-      )}
+        )}
+      </div>
       
       {gameState.phase === 'finished' && gameState.winner && (
         <div className="winner-banner">
