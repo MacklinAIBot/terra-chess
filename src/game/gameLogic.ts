@@ -334,7 +334,10 @@ export function getValidMoves(
                 const stepC = dc / absDc;
                 let clear = true;
                 for (let i = 1; i < absDr; i++) {
-                  if (board[r + stepR * i][c + stepC * i].piece) { clear = false; break; }
+                  const checkR = r + stepR * i;
+                  const checkC = c + stepC * i;
+                  if (checkR < 0 || checkR >= boardSize || checkC < 0 || checkC >= boardSize) { clear = false; break; }
+                  if (board[checkR][checkC].piece) { clear = false; break; }
                 }
                 if (clear) return true;
               }
@@ -345,7 +348,10 @@ export function getValidMoves(
                 const stepC = absDc === 0 ? 0 : dc / absDc;
                 let clear = true;
                 for (let i = 1; i < Math.max(absDr, absDc); i++) {
-                  if (board[r + stepR * i][c + stepC * i].piece) { clear = false; break; }
+                  const checkR = r + stepR * i;
+                  const checkC = c + stepC * i;
+                  if (checkR < 0 || checkR >= boardSize || checkC < 0 || checkC >= boardSize) { clear = false; break; }
+                  if (board[checkR][checkC].piece) { clear = false; break; }
                 }
                 if (clear) return true;
               }
