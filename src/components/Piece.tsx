@@ -1,4 +1,4 @@
-// Piece Component - Solid colored pieces
+// Piece Component - Colored chess pieces
 
 import type { Piece as PieceType } from '../game/types';
 import { PLAYER_COLOR_HEX } from '../game/types';
@@ -9,7 +9,7 @@ interface PieceProps {
   size: number;
 }
 
-// SVG paths for solid chess pieces
+// SVG paths for chess pieces
 const PIECE_SVGS: Record<string, { path: string; viewBox: string }> = {
   king: {
     viewBox: "0 0 100 100",
@@ -43,21 +43,19 @@ export function Piece({ piece, size }: PieceProps) {
   
   return (
     <div 
-      className="piece-solid"
+      className="piece-colored"
       style={{
         width: size,
         height: size,
-        backgroundColor: color,
-        borderRadius: piece.type === 'pawn' ? '40%' : piece.type === 'knight' ? '30%' : '10%',
       }}
     >
       <svg
         viewBox={svgData.viewBox}
         style={{
-          width: '70%',
-          height: '70%',
-          fill: '#fff',
-          filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))',
+          width: '75%',
+          height: '75%',
+          fill: color,
+          filter: `drop-shadow(0 1px 2px rgba(0,0,0,0.5))`,
         }}
       >
         <path d={svgData.path} />
