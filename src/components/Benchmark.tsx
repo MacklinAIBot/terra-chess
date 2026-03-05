@@ -17,13 +17,19 @@ interface PlayerStrategy {
   strategy: string;
 }
 
+interface GameMetrics {
+  winner: string | null;
+  moves: number;
+  captures: Record<string, number>;
+  checks: Record<string, number>;
+}
+
 interface BenchmarkResult {
-  blue: number;
-  red: number;
-  green: number;
-  yellow: number;
-  draws: number;
+  wins: Record<string, number>;
   avgMoves: number;
+  avgCaptures: Record<string, number>;
+  avgChecks: Record<string, number>;
+  totalGames: number;
 }
 
 export function Benchmark() {
@@ -52,9 +58,13 @@ export function Benchmark() {
     return STRATEGIES.balanced;
   };
   
-  const runGame = () => {
+  const runGame = (): GameMetrics => {
     let gs = initializeGame(params.numPlayers);
     let moves = 0;
+    
+    // Track metrics per player
+    const captures: Record<string, number> = { blue: 0, red: 0, green: 0, yellow: 0 };
+    const checks: Record<string, number> = { blue: 0, red: 0, green: 0, yellow: 0 };
     
     while (gs.phase !== 'finished' && moves < params.maxMoves) {
       const player = gs.players[gs.currentPlayerIndex];
@@ -62,6 +72,11 @@ export function Benchmark() {
       if (!player.alive) {
         gs.currentPlayerIndex = nextTurn(gs.players, gs.currentPlayerIndex);
         continue;
+      }
+      
+      // Track checks
+      if (player.inCheck) {
+        checks[player.color]++;
       }
       
       const strategy = getStrategyForColor(player.color);
@@ -74,13 +89,15 @@ export function Benchmark() {
       const selectedPiece = newBoard[aiMove.from.row][aiMove.from.col].piece;
       const clickedCell = newBoard[aiMove.to.row][aiMove.to.col].piece;
       
+      // Track captures
       if (clickedCell) {
-        currentPlayer.capturedPieces.push(clickedCell);
-        if (clickedCell.type === 'king') {
-          const capturedPlayerIndex = gs.players.findIndex(p => p.color === clickedCell.player);
-          if (capturedPlayerIndex !== -1) {
-            gs.players[capturedPlayerIndex].alive = false;
-          }
+        captures[currentPlayer.color]++;
+      }
+      
+      if (clickedCell?.type === 'king') {
+        const capturedPlayerIndex = gs.players.findIndex(p => p.color === clickedCell.player);
+        if (capturedPlayerIndex !== -1) {
+          gs.players[capturedPlayerIndex].alive = false;
         }
       }
       
@@ -107,7 +124,7 @@ export function Benchmark() {
       moves++;
     }
     
-    return { winner: gs.winner, moves };
+    return { winner: gs.winner, moves, captures, checks };
   };
   
   const handleRun = async () => {
@@ -115,27 +132,47 @@ export function Benchmark() {
     setResult(null);
     setProgress(0);
     
-    const results: BenchmarkResult = {
-      blue: 0, red: 0, green: 0, yellow: 0, draws: 0, avgMoves: 0
-    };
+    const wins: Record<string, number> = { blue: 0, red: 0, green: 0, yellow: 0, draws: 0 };
+    const totalCaptures: Record<string, number> = { blue: 0, red: 0, green: 0, yellow: 0 };
+    const totalChecks: Record<string, number> = { blue: 0, red: 0, green: 0, yellow: 0 };
     let totalMoves = 0;
     
     for (let i = 0; i < params.numGames; i++) {
-      const { winner, moves } = runGame();
+      const { winner, moves, captures, checks } = runGame();
       totalMoves += moves;
       
-      if (winner && winner in results) {
-        (results as any)[winner]++;
-      } else {
-        results.draws++;
+      // Add captures and checks to totals
+      for (const color of ['blue', 'red', 'green', 'yellow']) {
+        totalCaptures[color] += captures[color];
+        totalChecks[color] += checks[color];
       }
-      setProgress(Math.round(((i + 1) / params.numGames) * 100));
       
+      // Track wins
+      if (winner) {
+        wins[winner] = (wins[winner] || 0) + 1;
+      } else {
+        wins.draws = (wins.draws || 0) + 1;
+      }
+      
+      setProgress(Math.round(((i + 1) / params.numGames) * 100));
       await new Promise(r => setTimeout(r, 10));
     }
     
-    results.avgMoves = Math.round(totalMoves / params.numGames);
-    setResult(results);
+    // Calculate averages
+    const avgCaptures: Record<string, number> = {};
+    const avgChecks: Record<string, number> = {};
+    for (const color of ['blue', 'red', 'green', 'yellow']) {
+      avgCaptures[color] = Math.round((totalCaptures[color] / params.numGames) * 10) / 10;
+      avgChecks[color] = Math.round((totalChecks[color] / params.numGames) * 10) / 10;
+    }
+    
+    setResult({
+      wins,
+      avgMoves: Math.round(totalMoves / params.numGames),
+      avgCaptures,
+      avgChecks,
+      totalGames: params.numGames,
+    });
     setIsRunning(false);
   };
   
@@ -144,6 +181,8 @@ export function Benchmark() {
       prev.map(p => p.color === color ? { ...p, strategy } : p)
     );
   };
+  
+  const resultColors = ['blue', 'red', 'green', 'yellow'];
   
   return (
     <div className="benchmark-page">
@@ -232,36 +271,46 @@ export function Benchmark() {
         {result && (
           <div className="results-section">
             <h3>Results</h3>
+            
             <div className="results-grid">
-              <div className="result-item blue">
-                <span className="result-label">Blue ({playerStrategies[0].strategy})</span>
-                <span className="result-value">{result.blue}</span>
-              </div>
-              <div className="result-item red">
-                <span className="result-label">Red ({playerStrategies[1].strategy})</span>
-                <span className="result-value">{result.red}</span>
-              </div>
-              {params.numPlayers >= 4 && (
-                <>
-                  <div className="result-item green">
-                    <span className="result-label">Green ({playerStrategies[2].strategy})</span>
-                    <span className="result-value">{result.green}</span>
+              {resultColors.slice(0, params.numPlayers).map(color => (
+                <div key={color} className={`result-card ${color}`}>
+                  <div className="result-header">
+                    <span className="result-title">{color}</span>
+                    <span className="result-strategy">{playerStrategies.find(p => p.color === color)?.strategy}</span>
                   </div>
-                  <div className="result-item yellow">
-                    <span className="result-label">Yellow ({playerStrategies[3].strategy})</span>
-                    <span className="result-value">{result.yellow}</span>
+                  <div className="result-stats">
+                    <div className="stat-row">
+                      <span>Wins:</span>
+                      <span className="stat-value">{result.wins[color] || 0}</span>
+                    </div>
+                    <div className="stat-row">
+                      <span>Avg Captures:</span>
+                      <span className="stat-value">{result.avgCaptures[color]}</span>
+                    </div>
+                    <div className="stat-row">
+                      <span>Avg Checks:</span>
+                      <span className="stat-value">{result.avgChecks[color]}</span>
+                    </div>
                   </div>
-                </>
-              )}
-              <div className="result-item draws">
-                <span className="result-label">Draws</span>
-                <span className="result-value">{result.draws}</span>
+                </div>
+              ))}
+              <div className="result-card draws">
+                <div className="result-header">
+                  <span className="result-title">Draws</span>
+                </div>
+                <div className="result-stats">
+                  <div className="stat-row">
+                    <span>Total:</span>
+                    <span className="stat-value">{result.wins.draws || 0}</span>
+                  </div>
+                </div>
               </div>
             </div>
             
-            <div className="result-stats">
-              <div>Avg moves per game: {result.avgMoves}</div>
-              <div>Total games: {params.numGames}</div>
+            <div className="result-summary">
+              <div>Avg moves per game: <strong>{result.avgMoves}</strong></div>
+              <div>Total games: <strong>{result.totalGames}</strong></div>
             </div>
           </div>
         )}

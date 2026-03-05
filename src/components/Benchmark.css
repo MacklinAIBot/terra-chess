@@ -107,6 +107,13 @@
   margin-top: 20px;
 }
 
+.results-section h3 {
+  margin: 0 0 15px 0;
+  color: #aaa;
+  font-size: 1rem;
+  text-align: center;
+}
+
 .strategy-desc {
   margin-top: 15px;
   padding: 10px;
@@ -124,7 +131,74 @@
 .strategy-desc-item.green { color: #2ecc71; }
 .strategy-desc-item.yellow { color: #f1c40f; }
 
+.results-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.result-card {
+  background: #0f1729;
+  border-radius: 8px;
+  padding: 12px;
+  border-left: 4px solid;
+}
+
+.result-card.blue { border-color: #3498db; }
+.result-card.red { border-color: #e74c3c; }
+.result-card.green { border-color: #2ecc71; }
+.result-card.yellow { border-color: #f1c40f; }
+.result-card.draws { border-color: #95a5a6; }
+
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+
+.result-title {
+  font-weight: bold;
+  text-transform: capitalize;
+}
+
+.result-card.blue .result-title { color: #3498db; }
+.result-card.red .result-title { color: #e74c3c; }
+.result-card.green .result-title { color: #2ecc71; }
+.result-card.yellow .result-title { color: #f1c40f; }
+.result-card.draws .result-title { color: #95a5a6; }
+
+.result-strategy {
+  font-size: 0.75rem;
+  color: #888;
+  text-transform: capitalize;
+}
+
 .result-stats {
+  display: flex;
+  justify-content: space-between;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  padding: 3px 0;
+  font-size: 0.85rem;
+}
+
+.stat-row span:first-child {
+  color: #888;
+}
+
+.stat-value {
+  font-weight: bold;
+  color: #fff;
+}
+
+.result-summary {
   margin-top: 15px;
   padding-top: 15px;
   border-top: 1px solid #333;
@@ -133,60 +207,6 @@
   font-size: 0.85rem;
 }
 
-.results-section h3 {
-  margin: 0 0 15px 0;
-  color: #aaa;
-  font-size: 1rem;
-  text-align: center;
-}
-
-.results-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-
-.result-item {
-  display: flex;
-  justify-content: space-between;
-  padding: 12px 15px;
-  border-radius: 6px;
-  font-weight: bold;
-}
-
-.result-item.blue {
-  background: rgba(52, 152, 219, 0.2);
-  color: #3498db;
-}
-
-.result-item.red {
-  background: rgba(231, 76, 60, 0.2);
-  color: #e74c3c;
-}
-
-.result-item.green {
-  background: rgba(46, 204, 113, 0.2);
-  color: #2ecc71;
-}
-
-.result-item.yellow {
-  background: rgba(241, 196, 15, 0.2);
-  color: #f1c40f;
-}
-
-.result-item.draws {
-  background: rgba(149, 165, 166, 0.2);
-  color: #95a5a6;
-  grid-column: span 2;
-}
-
-.result-value {
-  font-size: 1.2rem;
-}
-
-.total-games {
-  text-align: center;
-  margin-top: 15px;
-  color: #666;
-  font-size: 0.85rem;
+.result-summary strong {
+  color: #fff;
 }
