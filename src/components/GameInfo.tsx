@@ -1,6 +1,5 @@
 // Game Info Component
 
-import { useState } from 'react';
 import type { GameState, Piece, Position } from '../game/types';
 import { PLAYER_COLOR_HEX } from '../game/types';
 import './GameInfo.css';
@@ -17,16 +16,6 @@ interface GameInfoProps {
   selectedPosition: Position | null;
   playerTypes: PlayerType[];
   onToggleAI: (color: string) => void;
-  isAITurn?: boolean;
-  onRunBenchmark?: (numGames: number) => Promise<{ blue: number; red: number; green: number; yellow: number; draws: number }>;
-}
-
-interface BenchmarkResult {
-  blue: number;
-  red: number;
-  green: number;
-  yellow: number;
-  draws: number;
 }
 
 const PIECE_DESCRIPTIONS: Record<string, string> = {
@@ -48,64 +37,62 @@ function colToLetter(col: number): string {
   }
 }
 
-export function GameInfo({ gameState, onNewGame, selectedPiece, selectedPosition, playerTypes, onToggleAI, isAITurn, onRunBenchmark }: GameInfoProps) {
+function getPieceSymbol(type: string): string {
+  switch (type) {
+    case 'king': return '♚';
+    case 'queen': return '♛';
+    case 'rook': return '♜';
+    case 'bishop': return '♝';
+    case 'knight': return '♞';
+    case 'pawn': return '♟';
+    default: return '';
+  }
+}
+
+export function GameInfo({ gameState, onNewGame, selectedPiece, selectedPosition, playerTypes, onToggleAI }: GameInfoProps) {
   const currentPlayer = gameState.players[gameState.currentPlayerIndex];
-  const currentPlayerType = playerTypes.find(p => p.color === currentPlayer?.color);
-  const isThinking = isAITurn && currentPlayerType?.isAI;
-  
-  const [benchmarkResult, setBenchmarkResult] = useState<BenchmarkResult | null>(null);
-  const [isBenchmarking, setIsBenchmarking] = useState(false);
   
   const positionNotation = selectedPosition 
     ? `${colToLetter(selectedPosition.col)}${gameState.board.length - selectedPosition.row}`
     : null;
   
-  const handleBenchmark = async () => {
-    if (!onRunBenchmark || isBenchmarking) return;
-    setIsBenchmarking(true);
-    setBenchmarkResult(null);
-    
-    try {
-      const result = await onRunBenchmark(10);
-      setBenchmarkResult(result);
-    } catch (e) {
-      console.error('Benchmark error:', e);
-    }
-    
-    setIsBenchmarking(false);
-  };
-  
   return (
     <div className="game-info">
       <h1 className="game-title">Empire Chess</h1>
       
-      {selectedPiece && (
-        <div className="selection-card">
-          <div className="selection-header">
-            <span 
-              className="selection-piece"
-              style={{ color: PLAYER_COLOR_HEX[selectedPiece.player as keyof typeof PLAYER_COLOR_HEX] }}
-            >
-              {selectedPiece.type === 'king' ? '♚' : selectedPiece.type === 'queen' ? '♛' : selectedPiece.type === 'rook' ? '♜' : selectedPiece.type === 'bishop' ? '♝' : selectedPiece.type === 'knight' ? '♞' : '♟'}
-            </span>
-            <span className="selection-name">
-              {selectedPiece.type.charAt(0).toUpperCase() + selectedPiece.type.slice(1)}
-            </span>
-            <span 
-              className="selection-player"
-              style={{ color: PLAYER_COLOR_HEX[selectedPiece.player as keyof typeof PLAYER_COLOR_HEX] }}
-            >
-              ({selectedPiece.player})
-            </span>
+      <div className="selection-card">
+        {selectedPiece ? (
+          <>
+            <div className="selection-header">
+              <span 
+                className="selection-piece"
+                style={{ color: PLAYER_COLOR_HEX[selectedPiece.player as keyof typeof PLAYER_COLOR_HEX] }}
+              >
+                {getPieceSymbol(selectedPiece.type)}
+              </span>
+              <span className="selection-name">
+                {selectedPiece.type.charAt(0).toUpperCase() + selectedPiece.type.slice(1)}
+              </span>
+              <span 
+                className="selection-player"
+                style={{ color: PLAYER_COLOR_HEX[selectedPiece.player as keyof typeof PLAYER_COLOR_HEX] }}
+              >
+                ({selectedPiece.player})
+              </span>
+            </div>
+            <div className="selection-position">
+              Position: {positionNotation}
+            </div>
+            <div className="selection-description">
+              {PIECE_DESCRIPTIONS[selectedPiece.type]}
+            </div>
+          </>
+        ) : (
+          <div className="selection-placeholder">
+            Click a piece to see details
           </div>
-          <div className="selection-position">
-            Position: {positionNotation}
-          </div>
-          <div className="selection-description">
-            {PIECE_DESCRIPTIONS[selectedPiece.type]}
-          </div>
-        </div>
-      )}
+        )}
+      </div>
       
       {gameState.phase === 'finished' && gameState.winner && (
         <div className="winner-banner">
@@ -124,7 +111,6 @@ export function GameInfo({ gameState, onNewGame, selectedPiece, selectedPosition
             : `${currentPlayer.color.charAt(0).toUpperCase() + currentPlayer.color.slice(1)}'s Turn`
           }
         </span>
-        {isThinking && <span className="thinking-indicator">🤔</span>}
         {currentPlayer.inCheck && gameState.phase !== 'finished' && (
           <span className="check-warning">⚠️ CHECK!</span>
         )}
@@ -165,26 +151,6 @@ export function GameInfo({ gameState, onNewGame, selectedPiece, selectedPosition
           <button onClick={() => onNewGame(2)}>2 Players</button>
           <button onClick={() => onNewGame(4)}>4 Players</button>
         </div>
-      </div>
-      
-      <div className="benchmark-controls">
-        <label>AI Benchmark:</label>
-        <button 
-          onClick={handleBenchmark} 
-          disabled={isBenchmarking}
-          className="benchmark-button"
-        >
-          {isBenchmarking ? 'Running...' : 'Run 10 Games'}
-        </button>
-        {benchmarkResult && (
-          <div className="benchmark-results">
-            <div>Blue: {benchmarkResult.blue}</div>
-            <div>Red: {benchmarkResult.red}</div>
-            {benchmarkResult.green > 0 && <div>Green: {benchmarkResult.green}</div>}
-            {benchmarkResult.yellow > 0 && <div>Yellow: {benchmarkResult.yellow}</div>}
-            <div>Draws: {benchmarkResult.draws}</div>
-          </div>
-        )}
       </div>
       
       <div className="rules-info">
