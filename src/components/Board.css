@@ -73,6 +73,7 @@
   color: #666;
   font-weight: bold;
   user-select: none;
+  padding-right: 6px;
 }
 
 .row-labels span {
@@ -80,4 +81,5 @@
   align-items: center;
   justify-content: center;
   text-align: center;
+  padding-left: 4px;
 }
