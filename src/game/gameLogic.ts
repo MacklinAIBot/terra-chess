@@ -53,7 +53,7 @@ function getStartingPositions(player: PlayerColor, numPlayers: number): Position
   const positions: Position[] = [];
   
   // Positions: Blue=top, Red=bottom, Yellow=left, Green=right
-  const startCol = 13; // N (columns N-U = indices 13-20)
+  const startCol = 12; // M (columns M-T = indices 12-19)
   const numCols = 8; // 8 pieces per row
   
   if (numPlayers === 2) {
