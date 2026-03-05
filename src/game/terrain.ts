@@ -1,6 +1,6 @@
 // Terrain System for Empire Chess
 
-export type TerrainType = 'normal' | 'mountain' | 'water' | 'forest' | 'lava';
+export export type TerrainType = 'normal' | 'mountain' | 'water' | 'forest' | 'lava';
 
 export interface TerrainCell {
   type: TerrainType;

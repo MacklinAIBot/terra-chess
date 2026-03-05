@@ -503,10 +503,10 @@ export function nextTurn(players: Player[], currentIndex: number): number {
   return nextIndex;
 }
 
-export function initializeGame(numPlayers: number): GameState {
+export function initializeGame(numPlayers: number, terrainSeed?: number): GameState {
   const players = createPlayers(numPlayers);
-  const terrainSeed = Math.floor(Math.random() * 100000);
-  const board = createInitialBoard(numPlayers, terrainSeed);
+  const seed = terrainSeed ?? Math.floor(Math.random() * 100000);
+  const board = createInitialBoard(numPlayers, seed);
   const setupBoardResult = setupBoard(board, players);
   
   return {
